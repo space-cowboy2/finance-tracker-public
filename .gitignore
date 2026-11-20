@@ -1,0 +1,11 @@
+.env
+*.db
+__pycache__/
+*.pyc
+.venv/
+
+# local backups
+*.bak
+server.log
+
+*.exe

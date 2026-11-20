@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Finance Tracker</title>
+  <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+</head>
+<body>
+  <h1>Finance Tracker</h1>
+  <button id="link-btn">Link Bank Account</button>
+  <button id="repair-btn">Repair Connection</button>
+  <button id="sync-btn">Sync Transactions</button>
+  <pre id="log"></pre>
+
+  <script>
+    const log = (msg) => {
+      document.getElementById('log').textContent += msg + "\n";
+    };
+
+    document.getElementById('link-btn').addEventListener('click', async () => {
+      const res = await fetch('/api/create_link_token', { method: 'POST' });
+      const { link_token } = await res.json();
+
+      const handler = Plaid.create({
+        token: link_token,
+        onSuccess: async (public_token) => {
+          await fetch('/api/exchange_public_token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ public_token }),
+          });
+          log('Account linked.');
+        },
+        onExit: (err) => {
+          if (err) log('Link exited with error: ' + JSON.stringify(err));
+        },
+      });
+      handler.open();
+    });
+
+    // Update mode: re-authenticates the existing Item in place. The access token
+    // stays valid, so there is no public token to exchange on success.
+    document.getElementById('repair-btn').addEventListener('click', async () => {
+      const res = await fetch('/api/create_link_token?update=1', { method: 'POST' });
+      const { link_token } = await res.json();
+
+      const handler = Plaid.create({
+        token: link_token,
+        onSuccess: () => log('Connection repaired. Try Sync Transactions.'),
+        onExit: (err) => {
+          if (err) log('Repair exited with error: ' + JSON.stringify(err));
+        },
+      });
+      handler.open();
+    });
+
+    document.getElementById('sync-btn').addEventListener('click', async () => {
+      log('Syncing...');
+      const res = await fetch('/api/sync_transactions', { method: 'POST' });
+      const data = await res.json();
+      log(JSON.stringify(data));
+    });
+  </script>
+</body>
+</html>
