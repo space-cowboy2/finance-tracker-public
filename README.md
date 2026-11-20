@@ -25,7 +25,7 @@ Single user, runs on localhost. All screenshots below use synthetic data.
 - Python, Flask, plain `sqlite3`
 - Plaid API (Transactions, Balance, Recurring)
 - Chart.js dashboard with accessible data tables for every chart
-- `unittest` suite (83 tests)
+- `unittest` suite (88 tests)
 
 ## Run it
 
@@ -48,3 +48,5 @@ Two tests use fixed August 2026 dates against a rolling window and fail when run
 ## Privacy
 
 Transactions live only in the local `finance.db`, which is gitignored along with `.env`. This public copy contains code and synthetic data only.
+
+The server binds to 127.0.0.1 and answers only requests addressed to `localhost`, `127.0.0.1` or `[::1]`, which blocks DNS-rebinding attacks from other websites. To open it under another name (for example a Tailscale hostname), list it in `FINANCE_ALLOWED_HOSTS`. The Flask debugger is off unless `FLASK_DEBUG=1`.
