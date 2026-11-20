@@ -50,6 +50,27 @@ client = plaid_api.PlaidApi(plaid.ApiClient(configuration))
 LOCAL_TZ = ZoneInfo("America/Chicago")
 
 
+LOCAL_HOSTNAMES = {"localhost", "127.0.0.1", "[::1]"}
+EXTRA_HOSTNAMES = {h.strip().lower() for h in os.getenv("FINANCE_ALLOWED_HOSTS", "").split(",") if h.strip()}
+
+
+def _hostname(netloc):
+    netloc = (netloc or "").strip().lower()
+    if netloc.startswith("["):
+        return netloc.split("]", 1)[0] + "]"
+    return netloc.split(":", 1)[0]
+
+
+@app.before_request
+def _reject_untrusted_host():
+    """Block DNS rebinding. A hostile page whose domain is re-pointed at
+    127.0.0.1 still sends its own name in Host, so only loopback names (plus
+    any listed in FINANCE_ALLOWED_HOSTS) are served, for reads as well as writes."""
+    if _hostname(request.host) not in LOCAL_HOSTNAMES | EXTRA_HOSTNAMES:
+        return jsonify({"error": "untrusted host"}), 403
+    return None
+
+
 @app.before_request
 def _same_origin_mutation():
     if request.method not in {"POST", "PATCH", "DELETE", "PUT"} or not request.path.startswith("/api/"):
@@ -1032,4 +1053,4 @@ def analyst_chat():
 
 
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=os.getenv("FLASK_DEBUG") == "1")
